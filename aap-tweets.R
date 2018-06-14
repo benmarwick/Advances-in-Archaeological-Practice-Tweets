@@ -5,6 +5,37 @@ library(stringr)
 library(magrittr)
 library(webshot)
 library(purrr)
+library(googledrive)
+
+#---------------------------------------------------------------------
+# We have some folders on Google drive that the editor has selected
+# some images from each article. The folders are named with the DOI 
+# of the article
+
+# get list of folders on google drive
+get_google_drive_folders <-  drive_ls("@aap_saaorg")
+
+# create a directory for each DOI to hold what we get from google drive
+map(get_google_drive_folders$name, dir.create)
+
+# for each DOI-directory, get contents of matching folder on google drive
+for (i in get_google_drive_folders$name) {
+  print(i)
+  # get contents of google drive folder matching DOI
+  x <- drive_ls(str_glue('@aap_saaorg/{i}'))
+  # get only images
+  x <- x %>% filter(str_detect(tolower(name), ".jpg|.png"))
+  # download this to the local folder for this DOI
+  setwd(i)
+  drive_download(as_id(x$id), 
+                 overwrite = TRUE)
+  setwd("../")
+}
+
+# Now we have local folders named by the DOI of the article, with an image
+# in each that we want to attach to the tweet
+
+#-----------------------------------------------------------------------------
 
 # Here is a function to scrape the AAP website of the TOC for the latest issue
 # It grabs the article titles and DOIs, then composes a tweet with them
@@ -44,6 +75,9 @@ write_aap_tweets <- function(){
               media_file_names = media_file_names))
 }  
 
+#------------------------------------------------------------------
+# Post tweets
+
 # run the function 
 tweets <- write_aap_tweets()
 
@@ -70,10 +104,19 @@ twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 for(i in 1:length(tweets$tweets)){  
   post_tweet(tweets$tweets[i], 
              media = tweets$media_file_names[i],
+             # TODO: add image from google drive also, only where image exists 
              token=twitter_token, 
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
 }
 
+#------------------------------------------------------------------
+# clean up
+
 # clean up by deleting the image files
 unlink(tweets$media_file_names)
+
+# clean up by deleting folders with ditor-selected images
+unlink(get_google_drive_folders$name, recursive = TRUE, force = TRUE)
+
+
