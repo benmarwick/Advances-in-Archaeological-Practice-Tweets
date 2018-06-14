@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 aap_saaorg_twitter_token.rds
+.httr-oauth
