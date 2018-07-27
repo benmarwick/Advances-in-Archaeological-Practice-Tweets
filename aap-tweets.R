@@ -87,8 +87,8 @@ tweets <- write_aap_tweets()
 #
 # appname <- "aap_saaorg_tweetbot"
 # 
-# key <- "kEsQRCaY0yT8qebGcT9GcSfvs"
-# secret <- "BWTYlxfatWxXpTfDF9uaYY57JmtKXeFfHPbtzjwQ6PaGPvc6EJ"
+# key <- "xxx"
+# secret <- "xxx"
 # 
 # aap_saaorg_twitter_token <- create_token(
 #   app = appname,
@@ -103,9 +103,10 @@ twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
 for(i in 1:length(tweets$tweets)){  
   post_tweet(tweets$tweets[i], 
-             media = tweets$media_file_names[i],
-             # TODO: add image from google drive also, only where image exists 
-             token=twitter_token, 
+             media = c(tweets$media_file_names[i],
+                       list.files(str_remove(tweets$media_file_names[i], ".png"), 
+                                  full.names = TRUE)),
+             token=twitter_token
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
 }
