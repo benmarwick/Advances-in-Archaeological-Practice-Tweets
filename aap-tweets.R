@@ -41,13 +41,14 @@ map(get_google_drive_folders$name, dir.create)
 
 # for each DOI-directory, get contents of matching folder on google drive
 for (i in get_google_drive_folders$name) {
-  print(i)
-  pwd <- getwd()
+  print(str_glue("Trying to get an image from {i}..."))
+  pwd <- here::here()
+  setwd(pwd)
   # get contents of google drive folder matching DOI
   x <- drive_ls(str_glue('@aap_saaorg/current items/{i}'))
   if(nrow(x) > 0) {
     # get only images
-    x <- x %>% filter(str_detect(tolower(name), ".jpg|.png|.tif|.pdf"))
+    x <- x %>% filter(str_detect(tolower(name), ".jpg|.jpeg|.png|.tif|.pdf"))
     # download this to the local folder for this DOI
     setwd(i)
     drive_download(as_id(x$id), 
@@ -58,15 +59,16 @@ for (i in get_google_drive_folders$name) {
     # skip and do nothing
     print(str_glue("No image file in {i}"))
   }
- 
+  print(str_glue("Finished with {i}."))
 }
 
 
 # if jpg, tif or pdf, convert to png
 for(i in get_google_drive_folders$name){
   
+  pwd <- here::here()
   setwd(i)
-  print(i)
+  print(str_glue("Starting to work on {i}..."))
   
   w <- list.files(".", pattern = ".png|.PNG$")
   x <- list.files(".", pattern = ".tif|.TIF|.tiff|.TIFF$")
@@ -105,23 +107,26 @@ for(i in get_google_drive_folders$name){
       } else {
     
     # do nothing
+        print(str_glue("Nothing done for {i}..."))
   }
  
   # check file size is under 3 MB (limit is 5MB)
   # and shrink it if it's over, shrink to X00 px wide
   img <- paste0(i, '.png')
   file_size <- file.size(img) / 1e6
-  if(file_size > 3) { 
+  if(file_size > 3 & !is.na(file_size)) { 
     
     webshot::resize(img,  "600x")
     
   } else {
     
     # do nothing
+    print(str_glue("Nothing done for {i}..."))
     
   }
   
-  setwd("../")
+  setwd(pwd)
+  print(str_glue("Finished work on {i}..."))
 }
 
   
