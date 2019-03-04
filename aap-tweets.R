@@ -42,15 +42,23 @@ map(get_google_drive_folders$name, dir.create)
 # for each DOI-directory, get contents of matching folder on google drive
 for (i in get_google_drive_folders$name) {
   print(i)
+  pwd <- getwd()
   # get contents of google drive folder matching DOI
   x <- drive_ls(str_glue('@aap_saaorg/current items/{i}'))
-  # get only images
-  x <- x %>% filter(str_detect(tolower(name), ".jpg|.png|.tif|.pdf"))
-  # download this to the local folder for this DOI
-  setwd(i)
-  drive_download(as_id(x$id), 
-                 overwrite = TRUE)
-  setwd("../")
+  if(nrow(x) > 0) {
+    # get only images
+    x <- x %>% filter(str_detect(tolower(name), ".jpg|.png|.tif|.pdf"))
+    # download this to the local folder for this DOI
+    setwd(i)
+    drive_download(as_id(x$id), 
+                   overwrite = TRUE)
+    setwd(pwd)
+    
+  } else {
+    # skip and do nothing
+    print(str_glue("No image file in {i}"))
+  }
+ 
 }
 
 
