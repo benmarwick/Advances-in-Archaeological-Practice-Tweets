@@ -64,7 +64,11 @@ for (i in get_google_drive_folders$name) {
 
 
 # if jpg, tif or pdf, convert to png
-for(i in get_google_drive_folders$name){
+dois <- list.dirs() %>% 
+  str_subset("10.1017") %>% 
+  str_remove_all(regex("^./"))
+
+for(i in dois){
   
   pwd <- here::here()
   setwd(i)
@@ -78,7 +82,7 @@ for(i in get_google_drive_folders$name){
  
   # if we have a tif, convert to png
    if(length(x) == 1){
-  img <- readTIFF(x)
+  img <- readTIFF(x, convert =  TRUE)
   png::writePNG(img, target = paste0(i, '.png'))
   
   } else 
@@ -107,7 +111,7 @@ for(i in get_google_drive_folders$name){
       } else {
     
     # do nothing
-        print(str_glue("Nothing done for {i}..."))
+        print(str_glue("No converting done for {i}..."))
   }
  
   # check file size is under 3 MB (limit is 5MB)
@@ -118,10 +122,12 @@ for(i in get_google_drive_folders$name){
     
     webshot::resize(img,  "600x")
     
+    print(str_glue("Finished resizing on {i}..."))
+    
   } else {
     
     # do nothing
-    print(str_glue("Nothing done for {i}..."))
+    print(str_glue("No resizing done for {i}..."))
     
   }
   
@@ -175,7 +181,7 @@ write_aap_tweets <- function(){
 }  
 
 #------------------------------------------------------------------
-# Post tweets
+# Compose tweets
 
 # run the function 
 tweets <- write_aap_tweets()
@@ -198,8 +204,13 @@ tweets <- write_aap_tweets()
 # don't git commit the token, add it to .gitignore
 #---------------------------------------
 
+
+
 twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
+# Post tweets to the world!
+# Warning: take a look at `tweets` first to make sure they look good
+ 
 for(i in 1:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
