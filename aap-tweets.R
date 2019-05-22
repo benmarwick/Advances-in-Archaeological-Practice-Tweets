@@ -49,10 +49,10 @@ for (i in get_google_drive_folders$name) {
   if(nrow(x) > 0) {
     # get only images
     x <- x %>% filter(str_detect(tolower(name), ".jpg|.jpeg|.png|.tif|.pdf"))
-    # download this to the local folder for this DOI
+    # download each image to the local folder for this DOI
     setwd(i)
-    drive_download(as_id(x$id), 
-                   overwrite = TRUE)
+    map(x$id, ~drive_download(as_id(.x), 
+                   overwrite = TRUE))
     setwd(pwd)
     
   } else {
@@ -80,43 +80,47 @@ for(i in dois){
   z <- list.files(".", pattern = ".jpg|.JPG|.jpeg|.JPEG$")
   
  
+  if(sum(length(x), length(y), length(z), length(w)) != 0){
+    
   # if we have a tif, convert to png
-   if(length(x) == 1){
-  img <- readTIFF(x, convert =  TRUE)
-  png::writePNG(img, target = paste0(i, '.png'))
-  
-  } else 
+     walk(x, ~png::writePNG(readTIFF(.x, convert =  TRUE), 
+                            target = paste0(i, "-", 
+                                            format(Sys.time(), "%H%M%S%OS3"), 
+                                            '.png')))
+ 
     
     # if we have a convert PDF, convert to png
-    if(length(y) == 1){
-      bitmap <- pdf_render_page(x, page = 1, dpi = 300)
-      png::writePNG(bitmap, target = paste0(i, '.png'))
-
-  } else
+      walk(y, ~png::writePNG(pdf_render_page(.x, page = 1, dpi = 300), 
+                             target = paste0(i, "-", 
+                                             format(Sys.time(), "%H%M%S%OS3"), 
+                                             '.png')))
     
     # , convert to jpg, convert png
-    if(length(z) == 1){
-      jpg <- readJPEG(z)
-      writePNG(jpg, paste0(i, '.png'))
- 
-    } else 
+      walk(z, ~writePNG(readJPEG(.x), paste0(i, "-", 
+                                             format(Sys.time(), "%H%M%S%OS3"), 
+                                             '.png')))
+     
       
       # if we already have a png, rename the png to DOI.png
-      if(length(w) == 1){
-        w <- readPNG(w)
-        png::writePNG(w, target = paste0(i, '.png'))
+        walk(w, ~png::writePNG(readPNG(.x), target = paste0(i, "-", 
+                                                            format(Sys.time(), "%H%M%S%OS3"), 
+                                                            '.png')))
+        
         # delete the original PNG
-        rm(w)
+        walk(w, ~rm(.x))
         
       } else {
     
     # do nothing
         print(str_glue("No converting done for {i}..."))
-  }
+      }
+  
  
   # check file size is under 3 MB (limit is 5MB)
   # and shrink it if it's over, shrink to X00 px wide
-  img <- paste0(i, '.png')
+  imgs <- list.files( pattern = paste0(i, ".*png"))
+  for(img in imgs){
+
   file_size <- file.size(img) / 1e6
   if(file_size > 3 & !is.na(file_size)) { 
     
@@ -129,6 +133,7 @@ for(i in dois){
     # do nothing
     print(str_glue("No resizing done for {i}..."))
     
+  }
   }
   
   setwd(pwd)
@@ -177,7 +182,8 @@ write_aap_tweets <- function(){
   tweets <- paste0("New in @saaorg's AAP: ",titles, " ", articleurls, " #archaeology" )
   
   return(list(tweets = tweets,
-              media_file_names = media_file_names))
+              media_file_names = media_file_names,
+              articleurls = articleurls))
 }  
 
 #------------------------------------------------------------------
@@ -192,26 +198,30 @@ tweets <- write_aap_tweets()
 #
 # appname <- "aap_saaorg_tweetbot"
 # 
-# key <- "xxx"
-# secret <- "xxx"
+# key <- ""
+# secret <- ""
 # 
 # aap_saaorg_twitter_token <- create_token(
 #   app = appname,
 #   consumer_key = key,
 #   consumer_secret = secret)
-## save token to home directory
+# # save token to home directory
 # saveRDS(aap_saaorg_twitter_token, file = "aap_saaorg_twitter_token.rds")
 # don't git commit the token, add it to .gitignore
 #---------------------------------------
 
 
-
+# this is securely stored online ont he @aap_saaorg Google Drive 
+# at https://drive.google.com/drive/u/1/folders/1ChWXaeK5_dMN6YoH6ocWf6dNA6-xd_2K
 twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
 # Post tweets to the world!
 # Warning: take a look at `tweets` first to make sure they look good
+
+article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
+article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 1:length(tweets$tweets)){  
+for(i in 5:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
@@ -220,7 +230,7 @@ for(i in 1:length(tweets$tweets)){
                        # attach the PNGs from the folder
                        # that has a filename that matches the DOI
                        list.files(str_remove(tweets$media_file_names[i], ".png"),
-                                  pattern = "png$", 
+                                  pattern = paste0(article_ids[i], ".*png"), 
                                   full.names = TRUE)),
              token=twitter_token
              )
@@ -235,6 +245,8 @@ unlink(tweets$media_file_names)
 
 # clean up by deleting folders with editor-selected images
 unlink(str_subset(list.dirs(), "10.1017"), recursive = TRUE, force = TRUE)
+
+# END
 
 
 #---------------------------------------------------------------------
