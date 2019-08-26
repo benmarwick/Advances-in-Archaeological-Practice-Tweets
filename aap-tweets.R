@@ -16,14 +16,21 @@ library(imager)
 #---------------------------------------------------------------------
 # We have some folders on Google drive that the editor has selected
 # some images from each article. The folders are named with the DOI 
-# of the article
+# of the article (and sometimes the surnames of the authors)
 
 # get list of folders on google drive
 get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
 
-# rename the folders to get rid of /
+doi_regex <- "10[.][0-9]{4,}([^\\s]+)"
+
+# get DOIs only
+google_drive_folders_dois <- str_extract(get_google_drive_folders$name, doi_regex)
+# no slash
+google_drive_folders_dois_no_slash <- str_replace_all(google_drive_folders_dois, "/", "\\.")
+
+# rename the folders to get rid of / and strip down to DOI only
 map2(get_google_drive_folders$id,
-     str_replace_all(get_google_drive_folders$name, "/", "\\."),
+     google_drive_folders_dois_no_slash,
      ~drive_rename(as_id(.x), 
              name = .y, 
              verbose = TRUE))
@@ -66,7 +73,7 @@ for (i in get_google_drive_folders$name) {
 # if jpg, tif or pdf, convert to png
 dois <- list.dirs() %>% 
   str_subset("10.1017") %>% 
-  str_remove_all(regex("^./"))
+  str_remove_all(regex("^./| .*$"))
 
 for(i in dois){
   
@@ -159,11 +166,23 @@ write_aap_tweets <- function(){
     html_nodes(css = ".part-link") %>%
     html_text %>%
     purrr::map_chr(~str_remove_all(.x, "\n"))
+  print("Getting the article titles...")
   
-  # get the DOI for the article
-  articleurls <- read_html(url) %>%
-    html_nodes(css = ".doi") %>%
+  # get the link to the article
+  articlelinks <- read_html(url) %>%
+    html_nodes(css = ".part-link") %>%
     html_attr("href")  
+  print("Getting the article DOIs...")
+  
+  # go to the article page to get its DOI
+  articleurls <- 
+    str_glue('https://www.cambridge.org{articlelinks}') %>% 
+      map_chr( ~read_html(.x) %>% 
+                html_nodes(css = ".doi") %>%
+                html_attr("href") %>% 
+             .[[1]]) # because the reference list sometimes has DOIs
+  print("Getting the article DOIs...")
+  
   
   # get screenshots of the title and abstract to attach to the tweets
   media_file_names <- 
@@ -171,6 +190,7 @@ write_aap_tweets <- function(){
       urltools::path(.) %>% 
       str_replace(., "/", ".") %>% 
       str_glue('.png'))
+  print("Getting the article screenshots...")
     
     webshot(articleurls, 
                    file = media_file_names,
@@ -211,7 +231,7 @@ tweets <- write_aap_tweets()
 #---------------------------------------
 
 
-# this is securely stored online ont he @aap_saaorg Google Drive 
+# this is securely stored online on the @aap_saaorg Google Drive 
 # at https://drive.google.com/drive/u/1/folders/1ChWXaeK5_dMN6YoH6ocWf6dNA6-xd_2K
 twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
@@ -221,7 +241,7 @@ twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 5:length(tweets$tweets)){  
+for(i in 1:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
@@ -231,7 +251,8 @@ for(i in 5:length(tweets$tweets)){
                        # that has a filename that matches the DOI
                        list.files(str_remove(tweets$media_file_names[i], ".png"),
                                   pattern = paste0(article_ids[i], ".*png"), 
-                                  full.names = TRUE)),
+                                  full.names = TRUE,
+                                  recursive = TRUE)),
              token=twitter_token
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
