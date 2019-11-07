@@ -19,7 +19,10 @@ library(imager)
 # of the article (and sometimes the surnames of the authors)
 
 # get list of folders on google drive
-get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
+# get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
+
+get_google_drive_folders <- 
+  googledrive::drive_ls(as_id("https://drive.google.com/drive/u/1/folders/1-h5tDmDyFUKi9VFRanPGEVrrnJxLIVTl"))
 
 doi_regex <- "10[.][0-9]{4,}([^\\s]+)"
 
@@ -36,7 +39,11 @@ map2(get_google_drive_folders$id,
              verbose = TRUE))
 
 # get list of folders on google drive again
-get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
+# get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
+
+get_google_drive_folders <- 
+  googledrive::drive_ls(as_id("https://drive.google.com/drive/u/1/folders/1-h5tDmDyFUKi9VFRanPGEVrrnJxLIVTl"))
+
 
 # just ones with well-formed names
 get_google_drive_folders <- 
@@ -47,26 +54,26 @@ get_google_drive_folders <-
 map(get_google_drive_folders$name, dir.create)
 
 # for each DOI-directory, get contents of matching folder on google drive
-for (i in get_google_drive_folders$name) {
-  print(str_glue("Trying to get an image from {i}..."))
+for (i in seq(get_google_drive_folders$id)) {
+  print(str_glue("Trying to get an image from {get_google_drive_folders$name[i]}..."))
   pwd <- here::here()
   setwd(pwd)
   # get contents of google drive folder matching DOI
-  x <- drive_ls(str_glue('@aap_saaorg/current items/{i}'))
+  x <- drive_ls(str_glue('https://drive.google.com/drive/u/1/folders/{get_google_drive_folders$id[i]}'))
   if(nrow(x) > 0) {
     # get only images
     x <- x %>% filter(str_detect(tolower(name), ".jpg|.jpeg|.png|.tif|.pdf"))
     # download each image to the local folder for this DOI
-    setwd(i)
+    setwd(get_google_drive_folders$name[i])
     map(x$id, ~drive_download(as_id(.x), 
                    overwrite = TRUE))
     setwd(pwd)
     
   } else {
     # skip and do nothing
-    print(str_glue("No image file in {i}"))
+    print(str_glue("No image file in {get_google_drive_folders$name[i]}"))
   }
-  print(str_glue("Finished with {i}."))
+  print(str_glue("Finished with {get_google_drive_folders$name[i]}."))
 }
 
 
