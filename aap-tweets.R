@@ -16,13 +16,12 @@ library(imager)
 #---------------------------------------------------------------------
 # We have some folders on Google drive that the editor has selected
 # some images from each article. The folders are named with the DOI 
-# of the article (and sometimes the surnames of the authors)
+# of the article (and nothing else in the name, only the DOI)
 
-# get list of folders on google drive
-# get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
-
-get_google_drive_folders <- 
-  googledrive::drive_ls(as_id("https://drive.google.com/drive/u/1/folders/1-h5tDmDyFUKi9VFRanPGEVrrnJxLIVTl"))
+# get list of folders on google drive, assuming that I only have one 
+# folder called 'Current Items', and that's the one with the images!
+g_drive <- drive_find(q = "name contains 'Current Items'")
+get_google_drive_folders <-  drive_ls(as_id(g_drive$id))
 
 doi_regex <- "10[.][0-9]{4,}([^\\s]+)"
 
@@ -39,11 +38,8 @@ map2(get_google_drive_folders$id,
              verbose = TRUE))
 
 # get list of folders on google drive again
-# get_google_drive_folders <-  drive_ls("@aap_saaorg/current items")
-
-get_google_drive_folders <- 
-  googledrive::drive_ls(as_id("https://drive.google.com/drive/u/1/folders/1-h5tDmDyFUKi9VFRanPGEVrrnJxLIVTl"))
-
+g_drive <- drive_find(q = "name contains 'Current Items'")
+get_google_drive_folders <-  drive_ls(as_id(g_drive$id))
 
 # just ones with well-formed names
 get_google_drive_folders <- 
@@ -202,7 +198,7 @@ write_aap_tweets <- function(){
     webshot(articleurls, 
                    file = media_file_names,
                    # top, left, width, and height
-                   cliprect = c(550, 0, 1000, 1200),
+                   cliprect = c(350, 0, 1000, 1200),
                    zoom = 1.5)
   
   # compose text of tweet
@@ -244,6 +240,8 @@ twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
 # Post tweets to the world!
 # Warning: take a look at `tweets` first to make sure they look good
+
+tweets
 
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
