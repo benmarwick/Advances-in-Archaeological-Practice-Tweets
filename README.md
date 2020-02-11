@@ -17,3 +17,8 @@ The AAP twitter page is at <https://twitter.com/aap_saaorg>. Here is a typical t
 
 ![](aap-tweets.png)
 
+## Code of Conduct
+
+Please note that the 'Advances-in-Archaeological-Practice-Tweets' project is released with a
+[Contributor Code of Conduct](CODE_OF_CONDUCT.md).
+By contributing to this project, you agree to abide by its terms.
