@@ -12,7 +12,6 @@ library(png)
 library(pdftools)
 library(imager)
 
-
 #---------------------------------------------------------------------
 # We have some folders on Google drive that the editor has selected
 # some images from each article. The folders are named with the DOI 
@@ -108,7 +107,7 @@ for(i in dois){
            dpi = 300)
     
     # , convert to jpg, convert png
-      walk(z, ~writePNG(readJPEG(.x), paste0(i, "-", 
+      walk(z, ~png::writePNG(readJPEG(.x), paste0(i, "-", 
                                              format(Sys.time(), "%H%M%S%OS3"), 
                                              '.png')),
            dpi = 300)
@@ -138,7 +137,7 @@ for(i in dois){
   file_size <- file.size(img) / 1e6
   if(file_size > 3 & !is.na(file_size)) { 
     
-    webshot::resize(img,  "100x")
+    webshot::resize(img,  "300x")
     
     print(str_glue("Finished resizing on {i}..."))
     
@@ -162,7 +161,7 @@ for(i in dois){
 # get twitter handles from our google sheet
 library(googlesheets4)
 sheet_with_twitter_accounts <- 
-  read_sheet("https://docs.google.com/spreadsheets/d/1naaNfoE3rP0qsMxCVqvO-nNCpt7zVlvFR0fOXzx6c5U/edit#gid=0") %>% 
+  read_sheet("https://docs.google.com/spreadsheets/d/1wo1pLRvC8Vhzoelyd-v0g66FYDQSvcgqG6Qhw9bmx04/edit#gid=0") %>% 
   mutate(basenames = str_remove(doi, "10.1017."))
   
 
@@ -175,26 +174,34 @@ write_aap_tweets <- function(){
   
   url <- "https://www.cambridge.org/core/journals/advances-in-archaeological-practice/latest-issue"
   
+  #create a web session with the desired login address
+  url_uw <- "myuw.washington.edu"
+  pgsession <- html_session(url_uw)
+  pgform <- html_form(pgsession)[[1]]  
+  filled_form <- set_values(pgform, 
+                            j_username="bmarwick", 
+                            j_password="****`")
+  submit_form(pgsession, filled_form)
+  
   # Retrieve the individual listings
-  titles <- read_html(url) %>%
+  titles <- jump_to(pgsession, url) %>%
     html_nodes(css = ".part-link") %>%
     html_text %>%
     purrr::map_chr(~str_remove_all(.x, "\n"))
   print("Getting the article titles...")
   
   # get the link to the article
-  articlelinks <- read_html(url) %>%
+  articlelinks <- jump_to(pgsession, url) %>%
     html_nodes(css = ".part-link") %>%
     html_attr("href")  
-  print("Getting the article DOIs...")
+  print("Getting the article links...")
   
   # go to the article page to get its DOI
   articleurls <- 
     str_glue('https://www.cambridge.org{articlelinks}') %>% 
-      map_chr( ~read_html(.x) %>% 
-                html_nodes(css = ".doi") %>%
-                html_attr("href") %>% 
-             .[[1]]) # because the reference list sometimes has DOIs
+      map_chr( ~jump_to(pgsession, .x) %>% 
+                html_nodes(css = "#article-tab .app-link__text.app-link--accent .text") %>%
+                 html_text() ) # because the reference list sometimes has DOIs
   print("Getting the article DOIs...")
   
   
@@ -209,7 +216,8 @@ write_aap_tweets <- function(){
     webshot(articleurls, 
                    file = media_file_names,
                    # top, left, width, and height
-                   cliprect = c(350, 0, 1000, 1200),
+                   cliprect = c(710, 0, 1000, 1200),
+            # maybe they need to be wider? how to get PDF view?
                    zoom = 1.5)
     
     # get twitter handle of authors from our spreadsheet
@@ -217,7 +225,7 @@ write_aap_tweets <- function(){
     sheet_with_twitter_accounts$`twitter-account`[ match(basename(articleurls), 
           sheet_with_twitter_accounts$basenames)]
     twitter_handles <- ifelse(!is.na(twitter_handles), 
-                              paste0("by @", twitter_handles, " "), 
+                              paste0("by ", twitter_handles, " "), 
                               twitter_handles)
     twitter_handles[is.na(twitter_handles)] <- ""
   
@@ -263,10 +271,13 @@ twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
 
 tweets
 
+# check chr length, max allowed in 280
+nchar(tweets$tweets)
+
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 2:length(tweets$tweets)){  
+for(i in 8:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
