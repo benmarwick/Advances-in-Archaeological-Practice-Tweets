@@ -3,7 +3,6 @@ library(rtweet)
 library(rvest)
 library(stringr)
 library(magrittr)
-library(webshot)
 library(purrr)
 library(googledrive)
 library("jpeg")
@@ -11,6 +10,7 @@ library("tiff")
 library(png)
 library(pdftools)
 library(imager)
+library(webshot2)
 
 #---------------------------------------------------------------------
 # We have some folders on Google drive that the editor has selected
@@ -135,9 +135,9 @@ for(i in dois){
   for(img in imgs){
 
   file_size <- file.size(img) / 1e6
-  if(file_size > 3 & !is.na(file_size)) { 
+  if(file_size > 4 & !is.na(file_size)) { 
     
-    webshot::resize(img,  "300x")
+    webshot::resize(img,  "900x")
     
     print(str_glue("Finished resizing on {i}..."))
     
@@ -176,15 +176,15 @@ write_aap_tweets <- function(){
   
   #create a web session with the desired login address
   url_uw <- "myuw.washington.edu"
-  pgsession <- html_session(url_uw)
+  pgsession <- session(url_uw)
   pgform <- html_form(pgsession)[[1]]  
-  filled_form <- set_values(pgform, 
+  filled_form <- html_form_set(pgform, 
                             j_username="bmarwick", 
                             j_password="****`")
-  submit_form(pgsession, filled_form)
+  session_submit(pgsession, filled_form)
   
   # Retrieve the individual listings
-  titles <- jump_to(pgsession, url) %>%
+  titles <- session_jump_to(pgsession, url) %>%
     html_nodes(css = ".part-link") %>%
     html_text %>%
     purrr::map_chr(~str_remove_all(.x, "\n"))
@@ -204,7 +204,6 @@ write_aap_tweets <- function(){
                  html_text() ) # because the reference list sometimes has DOIs
   print("Getting the article DOIs...")
   
-  
   # get screenshots of the title and abstract to attach to the tweets
   media_file_names <- 
     map_chr(articleurls, ~.x %>% 
@@ -213,13 +212,36 @@ write_aap_tweets <- function(){
       str_glue('.png'))
   print("Getting the article screenshots...")
     
-    webshot(articleurls, 
-                   file = media_file_names,
-                   # top, left, width, and height
-                   cliprect = c(710, 0, 1000, 1200),
-            # maybe they need to be wider? how to get PDF view?
-                   zoom = 1.5)
+  for(i in 1:length(articleurls)){
     
+  print(paste0("Getting the screenshot for ", articleurls[[i]], "..."))
+    
+  webshot(articleurls[[i]], 
+          file = media_file_names[[i]],
+          vwidth = 1200,
+          vheight = 1300,
+          delay = 1,
+          # top, left, width, and height
+          cliprect =  #"viewport",
+            c(0, 
+              0, 
+              1200,
+              1300),
+          useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
+          zoom = 1)
+  
+  text_img <- magick::image_read(media_file_names[[i]])
+  
+  text_img_cropped <- 
+    magick::image_crop(text_img,
+                       geometry="+0+110",
+                       gravity="NorthWest",
+                       repage=TRUE)
+  
+  magick::image_write(text_img_cropped,
+                      path = media_file_names[i])
+}
+  
     # get twitter handle of authors from our spreadsheet
     twitter_handles <- 
     sheet_with_twitter_accounts$`twitter-account`[ match(basename(articleurls), 
@@ -230,7 +252,9 @@ write_aap_tweets <- function(){
     twitter_handles[is.na(twitter_handles)] <- ""
   
   # compose text of tweet
-  tweets <- paste0("New in @saaorg's AAP: ",titles, " ", twitter_handles, articleurls, " #archaeology" )
+  tweets <- paste0("New in @saaorg's AAP: ",titles, " ", 
+                   twitter_handles, articleurls, 
+                   " #archaeology" )
   
   return(list(tweets = tweets,
               media_file_names = media_file_names,
