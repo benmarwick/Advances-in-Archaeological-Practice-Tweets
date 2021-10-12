@@ -8,9 +8,10 @@ The R code in this repo will:
 
 - look at the list of articles on the AAP ['latest issue' page](https://www.cambridge.org/core/journals/advances-in-archaeological-practice/latest-issue) and grab the title, DOI, and screenshot of the abstract of each article
 - look into folders on a [private Google Drive folder](https://drive.google.com/drive/u/1/folders/1ChWXaeK5_dMN6YoH6ocWf6dNA6-xd_2K) where the editor has deposited some images from each article
+- look into a [private Google Sheet](https://docs.google.com/spreadsheets/d/1wo1pLRvC8Vhzoelyd-v0g66FYDQSvcgqG6Qhw9bmx04/edit#gid=0) to get twitter handles and hashtags to include in the tweets
 - convert those images from jpeg/pdf/tiff to png, and resize to 3 MB (Twitter's max image size)
 - compose a tweet for each article in the latest issue in the format "New in @saaorg's AAP: {title} {DOI} #archaeology", and attach the abstract screenshot and the images from the Google Drive to that tweet.
-- post tweets for all the articles in the ltest issue 
+- post tweets for all the articles in the latest issue 
 
 
 The AAP twitter page is at <https://twitter.com/aap_saaorg>. Here is a typical tweet created by this code:
