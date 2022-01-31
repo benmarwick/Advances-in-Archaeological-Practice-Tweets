@@ -10,7 +10,7 @@ library("tiff")
 library(png)
 library(pdftools)
 library(imager)
-library(webshot2)
+library(webshot2) # remotes::install_github("rstudio/webshot2")
 
 #---------------------------------------------------------------------
 # We have some folders on Google drive that the editor has selected
@@ -191,7 +191,7 @@ write_aap_tweets <- function(){
   print("Getting the article titles...")
   
   # get the link to the article
-  articlelinks <- jump_to(pgsession, url) %>%
+  articlelinks <- session_jump_to(pgsession, url) %>%
     html_nodes(css = ".part-link") %>%
     html_attr("href")  
   print("Getting the article links...")
@@ -199,7 +199,7 @@ write_aap_tweets <- function(){
   # go to the article page to get its DOI
   articleurls <- 
     str_glue('https://www.cambridge.org{articlelinks}') %>% 
-      map_chr( ~jump_to(pgsession, .x) %>% 
+      map_chr( ~session_jump_to(pgsession, .x) %>% 
                 html_nodes(css = "#article-tab .app-link__text.app-link--accent .text") %>%
                  html_text() ) # because the reference list sometimes has DOIs
   print("Getting the article DOIs...")
@@ -250,11 +250,17 @@ write_aap_tweets <- function(){
                               paste0("by ", twitter_handles, " "), 
                               twitter_handles)
     twitter_handles[is.na(twitter_handles)] <- ""
+    
+    # get custom hastags for each paper from our spreadsheet
+    custom_hashtags <- 
+      sheet_with_twitter_accounts$hashtags[ match(basename(articleurls), 
+                                                           sheet_with_twitter_accounts$basenames)]
+    custom_hashtags[is.na(custom_hashtags)] <- ""
   
   # compose text of tweet
   tweets <- paste0("New in @saaorg's AAP: ",titles, " ", 
                    twitter_handles, articleurls, 
-                   " #archaeology" )
+                   " #archaeology ", custom_hashtags )
   
   return(list(tweets = tweets,
               media_file_names = media_file_names,
@@ -301,18 +307,18 @@ nchar(tweets$tweets)
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 1:length(tweets$tweets)){  
+for(i in 2:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
              # attach the screenshot of the title and abstract
-             media = c(tweets$media_file_names[i],
-                       # attach the PNGs from the folder
-                       # that has a filename that matches the DOI
-                       list.files(str_remove(tweets$media_file_names[i], ".png"),
-                                  pattern = paste0(article_ids[i], ".*png"), 
-                                  full.names = TRUE,
-                                  recursive = TRUE)),
+           #  media = c(tweets$media_file_names[i],
+           #            # attach the PNGs from the folder
+           #            # that has a filename that matches the DOI
+           #            list.files(str_remove(tweets$media_file_names[i], ".png"),
+           #                       pattern = paste0(article_ids[i], ".*png"), 
+           #                       full.names = TRUE,
+           #                       recursive = TRUE)),
              token=twitter_token
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
