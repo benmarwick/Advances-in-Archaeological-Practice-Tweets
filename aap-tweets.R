@@ -154,7 +154,6 @@ for(i in dois){
 }
 
   
-
 # Now we have local folders named by the DOI of the article, with an image
 # in each that we want to attach to the tweet
 
@@ -164,7 +163,6 @@ sheet_with_twitter_accounts <-
   read_sheet("https://docs.google.com/spreadsheets/d/1wo1pLRvC8Vhzoelyd-v0g66FYDQSvcgqG6Qhw9bmx04/edit#gid=0") %>% 
   mutate(basenames = str_remove(doi, "10.1017."))
   
-
 #-----------------------------------------------------------------------------
 
 # Here is a function to scrape the AAP website of the TOC for the latest issue
@@ -307,22 +305,26 @@ nchar(tweets$tweets)
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 2:length(tweets$tweets)){  
+for(i in 4:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
-             # attach the screenshot of the title and abstract
-           #  media = c(tweets$media_file_names[i],
-           #            # attach the PNGs from the folder
-           #            # that has a filename that matches the DOI
-           #            list.files(str_remove(tweets$media_file_names[i], ".png"),
-           #                       pattern = paste0(article_ids[i], ".*png"), 
-           #                       full.names = TRUE,
-           #                       recursive = TRUE)),
-             token=twitter_token
+         #  # attach the screenshot of the title and abstract
+         # media = c(tweets$media_file_names[i],
+         #           # attach the PNGs from the folder
+         #           # that has a filename that matches the DOI
+         #           list.files(str_remove(tweets$media_file_names[i], ".png"),
+         #                      pattern = paste0(article_ids[i], ".*png"), 
+         #                      full.names = TRUE,
+         #                      recursive = TRUE)),
+           token=twitter_token
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
 }
+
+# failed at #4 with the message 
+# No encoding supplied: defaulting to UTF-8.
+# Error: media file number 1 failed to upload
 
 #------------------------------------------------------------------
 # clean up
