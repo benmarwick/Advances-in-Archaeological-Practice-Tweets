@@ -287,12 +287,29 @@ tweets <- write_aap_tweets()
 # # save token to home directory
 # saveRDS(aap_saaorg_twitter_token, file = "aap_saaorg_twitter_token.rds")
 # don't git commit the token, add it to .gitignore
+
+# updated with the current way to auth twitter
+# aap_saaorg_twitter_token <-
+#   rtweet_bot(api_key = "", 
+#              api_secret = "", 
+#              access_token = "", 
+#              access_secret = "")
+# saveRDS(aap_saaorg_twitter_token, file = "aap_saaorg_twitter_token.rds")
+
 #---------------------------------------
 
 
 # this is securely stored online on the @aap_saaorg Google Drive 
 # at https://drive.google.com/drive/u/1/folders/1ChWXaeK5_dMN6YoH6ocWf6dNA6-xd_2K
-twitter_token <- readRDS("aap_saaorg_twitter_token.rds")
+aap_saaorg_twitter_token <- auth_as(auth = "aap_saaorg_twitter_token.rds")
+auth_as(auth = aap_saaorg_twitter_token)
+
+# check it
+auth_get() 
+
+# it didn't work until I logged into the aap twitter, 
+# ran auth_setup_default() 
+# and then it just worked fine, very odd
 
 # Post tweets to the world!
 # Warning: take a look at `tweets` first to make sure they look good
@@ -305,26 +322,28 @@ nchar(tweets$tweets)
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 4:length(tweets$tweets)){  
+for(i in 9:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
-         #  # attach the screenshot of the title and abstract
-         # media = c(tweets$media_file_names[i],
-         #           # attach the PNGs from the folder
-         #           # that has a filename that matches the DOI
-         #           list.files(str_remove(tweets$media_file_names[i], ".png"),
-         #                      pattern = paste0(article_ids[i], ".*png"), 
-         #                      full.names = TRUE,
-         #                      recursive = TRUE)),
-           token=twitter_token
+          # attach the screenshot of the title and abstract
+         media = c(tweets$media_file_names[i],
+                   # attach the PNGs from the folder
+                   # that has a filename that matches the DOI
+                   list.files(str_remove(tweets$media_file_names[i], ".png"),
+                              pattern = paste0(article_ids[i], ".*png"), 
+                              full.names = TRUE,
+                              recursive = TRUE)),
+         media_alt_text = c("screenshot of the abstract of the journal article",
+                            rep(
+                            "figure from the journal article",
+                            length( list.files(str_remove(tweets$media_file_names[i], ".png"),
+                                               pattern = paste0(article_ids[i], ".*png"), 
+                                               full.names = TRUE,
+                                               recursive = TRUE))))
              )
   if(i<length(tweets$tweets)){Sys.sleep(time=180)}
 }
-
-# failed at #4 with the message 
-# No encoding supplied: defaulting to UTF-8.
-# Error: media file number 1 failed to upload
 
 #------------------------------------------------------------------
 # clean up
