@@ -322,7 +322,7 @@ nchar(tweets$tweets)
 article_ids <- str_remove(tweets$articleurls, "https://doi.org/")
 article_ids <- str_replace(article_ids, "/", ".")
  
-for(i in 9:length(tweets$tweets)){  
+for(i in 1:length(tweets$tweets)){  
   print(tweets$tweets[i])
   # post the text
   post_tweet(tweets$tweets[i], 
