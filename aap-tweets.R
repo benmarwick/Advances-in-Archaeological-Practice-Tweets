@@ -307,7 +307,8 @@ auth_as(auth = aap_saaorg_twitter_token)
 # check it
 auth_get() 
 
-# it didn't work until I logged into the aap twitter, 
+# it didn't work until I logged into the aap twitter in 
+# my web browser, 
 # ran auth_setup_default() 
 # and then it just worked fine, very odd
 
